@@ -29,7 +29,6 @@ router.post('/', async (req, res) => {
 
 
 const evaluateRule = (ast, data) => {
-  // Implement your AST evaluation logic here
   switch (ast.type) {
     case 'operand':
       return eval(ast.value.replace(/(\w+)/g, (match) => data[match]));

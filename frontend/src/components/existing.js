@@ -32,7 +32,7 @@ const CombineRules = () => {
 
   const handleReset = () => {
     setRuleIds('');
-    setCombinedRuleId(''); // Reset combined rule ID when resetting form
+    setCombinedRuleId(''); 
   };
 
   return (
