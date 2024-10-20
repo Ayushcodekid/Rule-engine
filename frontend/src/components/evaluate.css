@@ -1,0 +1,81 @@
+/* EvaluateRule.css */
+
+.evaluate-rule-container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
+  }
+  
+  .evaluate-rule-form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .evaluate-rule-form h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+  }
+  
+  .input-field,
+  .textarea-field {
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+  }
+  
+  .input-field:focus,
+  .textarea-field:focus {
+    border-color: #007bff;
+    outline: none;
+  }
+  
+  .button-container {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .submit-button,
+  .reset-button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s, transform 0.2s;
+  }
+  
+  .submit-button {
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .reset-button {
+    background-color: #f44336;
+    color: white;
+  }
+  
+  .submit-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+  }
+  
+  .reset-button:hover {
+    background-color: #c62828;
+    transform: translateY(-1px);
+  }
+  
+  .result-message {
+    margin-top: 15px;
+    font-weight: bold;
+    text-align: center;
+    color: #333;
+  }
+  
