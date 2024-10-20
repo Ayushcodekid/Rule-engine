@@ -1,7 +1,10 @@
+
+
 const express = require('express');
 const router = express.Router();
 const { Rule } = require('../models/rule');
-const { createRule, evaluateRule, combineRules } = require('./controller/rulecontroller');
+const { createRule, combineRules } = require('../controller/rulecontroller');
+const mongoose = require('mongoose');
 
 // Create a new rule
 router.post('/', async (req, res) => {
@@ -16,39 +19,81 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Evaluate a rule
+
+
+
+
+
+
+
+
+
+const evaluateRule = (ast, data) => {
+  // Implement your AST evaluation logic here
+  switch (ast.type) {
+    case 'operand':
+      return eval(ast.value.replace(/(\w+)/g, (match) => data[match]));
+    case 'composite':
+      if (ast.operator === 'AND') {
+        return ast.children.every(child => evaluateRule(child, data));
+      } else if (ast.operator === 'OR') {
+        return ast.children.some(child => evaluateRule(child, data));
+      }
+      break;
+    default:
+      throw new Error('Unknown AST node type');
+  }
+};
+
+
+
+
+
+
 router.post('/evaluate', async (req, res) => {
   try {
-    const { ruleString, dataArray } = req.body; // Accept ruleString instead of ruleId
+    const { ruleId, dataArray } = req.body;
 
-    if (!ruleString) {
-      return res.status(400).json({ message: 'ruleString is required.' });
+    // Fetch the rule from the database
+    const rule = await Rule.findById(ruleId);
+    if (!rule) {
+      return res.status(404).json({ message: 'Rule not found' });
     }
 
-    // Create the AST from the ruleString
-    const ast = await createRule(ruleString);
-
-    // Check if dataArray is provided
-    if (!dataArray) {
-      return res.status(400).json({ message: 'dataArray is required.' });
+    // Check if dataArray is provided and is an array
+    if (!Array.isArray(dataArray)) {
+      return res.status(400).json({ message: 'Data array is required and should be an array.' });
     }
 
-    // If dataArray is not an array, assume it's a single object and convert it into an array
-    const dataInputs = Array.isArray(dataArray) ? dataArray : [dataArray];
+    // Check if all elements in dataArray are objects
+    for (const data of dataArray) {
+      if (typeof data !== 'object' || data === null) {
+        return res.status(400).json({ message: 'Each data entry should be an object.' });
+      }
+    }
 
-    // Evaluate each data object
-    const results = dataInputs.map(data => {
+    // Log the entire fetched rule to check its structure
+    console.log('Fetched rule:', rule);
+
+    // Ensure that the AST is valid
+    const ast = rule.ast;
+    if (!ast) {
+      return res.status(400).json({ message: 'Invalid rule format. Rule AST is required.' });
+    }
+
+    // Evaluate the rule for each data object
+    const results = dataArray.map(data => {
       try {
-        const result = evaluateRule(ast, data); // Evaluate using AST
+        const result = evaluateRule(ast, data); // Ensure evaluateRule works with ast
         return {
           data,
-          result: result !== undefined ? result : false, // Ensure a result is returned
+          result: result !== undefined ? result : false,
         };
       } catch (error) {
         console.error('Error evaluating data:', error);
         return {
           data,
-          result: false, // Handle individual evaluation errors
+          result: false,
         };
       }
     });
@@ -56,41 +101,29 @@ router.post('/evaluate', async (req, res) => {
     // Check if all results are true
     const allResults = results.every(r => r.result);
 
-    // Respond with a single result indicating if all evaluations passed, return true or false
-    res.json({ result: allResults }); // Return true if all are true, false otherwise
+    // Respond with a single result indicating if all evaluations passed
+    res.json({ result: allResults });
 
   } catch (error) {
     console.error('Error evaluating rule:', error);
-    res.status(400).json({ result: false }); // Send false on error
+    res.status(400).json({ result: false, message: 'Error during evaluation.' });
   }
 });
 
-// Combine rules
-router.post('/combine', async (req, res) => {
-  try {
-    const { ruleStrings } = req.body; // Accept ruleStrings instead of ruleIds
 
-    // Check if ruleStrings are provided
-    if (!ruleStrings || ruleStrings.length < 2) {
-      return res.status(400).json({ message: 'At least two ruleStrings are required to combine.' });
-    }
 
-    const combinedAST = await combineRules(ruleStrings);
-    const combinedRule = new Rule({ name: 'Combined Rule', ast: combinedAST });
-    const savedCombinedRule = await combinedRule.save();
 
-    res.json({ combinedRuleId: savedCombinedRule._id });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
+
+
+
 
 // Get all rules
-router.get('/', async (req, res) => {
+router.get('/getRules', async (req, res) => {
   try {
     const rules = await Rule.find(); // Fetch all rules from the database
     const ruleList = rules.map(rule => ({
-      name: rule.name, // Only return the name
+      _id: rule._id, // Return _id and name
+      name: rule.name,
     }));
     res.json(ruleList);
   } catch (error) {
@@ -98,5 +131,70 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+// Fetch a specific rule by ObjectId
+router.get('/:id', async (req, res) => {
+  const ruleId = req.params.id;
+
+  console.log('Fetching rule with ID:', ruleId);
+
+  // Check if the provided ID is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(ruleId)) {
+    return res.status(400).json({ message: 'Invalid Rule ID format' });
+  }
+
+  try {
+    const rule = await Rule.findById(ruleId);
+
+    if (!rule) {
+      return res.status(404).json({ message: 'Rule not found' });
+    }
+
+    res.json(rule);
+
+  } catch (error) {
+    console.error('Error fetching rule by ID:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
+
+
+
+
+// Combine rules
+router.post('/combine', async (req, res) => {
+  const { ruleIds } = req.body;
+
+  if (!Array.isArray(ruleIds) || ruleIds.length < 2) {
+    return res.status(400).json({ message: 'At least two valid rule IDs are required.' });
+  }
+
+  try {
+    const rules = await Rule.find({ _id: { $in: ruleIds } });
+    if (rules.length !== ruleIds.length) {
+      return res.status(404).json({ message: 'One or more rules not found.' });
+    }
+
+    const ruleStrings = rules.map(rule => rule.ast.value); // Extracting the rule strings
+    const combinedAST = await combineRules(ruleStrings);
+    
+    const combinedRule = new Rule({
+      ast: combinedAST,
+      name: `Combined Rule: ${ruleIds.join(', ')}`, // Customize as needed
+    });
+
+    const savedRule = await combinedRule.save();
+    res.json({ combinedRuleId: savedRule._id });
+  } catch (error) {
+    console.error('Error combining rules:', error);
+    res.status(500).json({ message: 'An error occurred while combining rules.' });
+  }
+});
+
+
+
+
 
 module.exports = router;

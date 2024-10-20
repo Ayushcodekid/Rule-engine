@@ -41,48 +41,38 @@ async function createRule(ruleString) {
 }
 
 // Function to evaluate the rule against given data
-async function evaluateRule(ruleString, data) {
-  const ast = await createRule(ruleString); // Create AST from the rule string
-
-  if (ast.type === 'operator') {
-    const leftResult = await evaluateRule(ast.left, data);
-    const rightResult = await evaluateRule(ast.right, data);
-    switch (ast.value) {
-      case 'AND':
-        return leftResult && rightResult;
-      case 'OR':
-        return leftResult || rightResult;
-      default:
-        return false;
-    }
-  } else {
-    const [attribute, operator, value] = ast.value.split(' ');
-    switch (operator) {
-      case '>': return data[attribute] > Number(value);
-      case '<': return data[attribute] < Number(value);
-      case '=': return data[attribute] == value;
-      case '!=': return data[attribute] != value;
-      case '>=': return data[attribute] >= Number(value);
-      case '<=': return data[attribute] <= Number(value);
-      default: return false;
-    }
-  }
-}
-
-// Combine rules
+// Function to combine multiple rules into one AST
 async function combineRules(ruleStrings) {
   if (ruleStrings.length < 2) {
     throw new Error('At least two rules are required to combine.');
   }
 
+  const asts = await Promise.all(ruleStrings.map(ruleString => createRule(ruleString)));
+
   const combinedAST = {
-    type: 'operator',
-    value: 'AND',
-    left: await createRule(ruleStrings[0]),
-    right: await createRule(ruleStrings[1]),
+    type: 'composite',
+    operator: 'AND', // Can be modified as needed
+    children: asts, // Array of ASTs
   };
 
   return combinedAST;
 }
+
+// Function to evaluate a rule against data
+const evaluateRule = (ast, data) => {
+  switch (ast.type) {
+    case 'operand':
+      return eval(ast.value.replace(/(\w+)/g, (match) => data[match])); // Simplified example
+    case 'composite':
+      if (ast.operator === 'AND') {
+        return ast.children.every(child => evaluateRule(child, data));
+      } else if (ast.operator === 'OR') {
+        return ast.children.some(child => evaluateRule(child, data));
+      }
+      break;
+    default:
+      throw new Error('Unknown AST node type');
+  }
+};
 
 module.exports = { createRule, evaluateRule, combineRules };

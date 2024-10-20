@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import axios from 'axios';
+import React, { useState } from 'react';
 import './existing.css'; // Import the CSS file
 
 const CombineRules = () => {
@@ -16,9 +16,19 @@ const CombineRules = () => {
       setCombinedRuleId(response.data.combinedRuleId);
       console.log('Combined Rule ID:', response.data.combinedRuleId);
     } catch (error) {
-      console.error('Error combining rules:', error.response.data);
+      if (error.response) {
+        // Server responded with a status other than 200 range
+        console.error('Error combining rules:', error.response.data);
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('No response received:', error.request);
+      } else {
+        // Something happened in setting up the request
+        console.error('Error:', error.message);
+      }
     }
   };
+  
 
   const handleReset = () => {
     setRuleIds('');
