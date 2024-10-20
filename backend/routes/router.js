@@ -161,27 +161,25 @@ router.get('/:id', async (req, res) => {
 
 
 
-
-// Combine rules
 router.post('/combine', async (req, res) => {
-  const { ruleIds } = req.body;
+  const { ruleNames } = req.body;  // Make sure this is checking for ruleNames
 
-  if (!Array.isArray(ruleIds) || ruleIds.length < 2) {
-    return res.status(400).json({ message: 'At least two valid rule IDs are required.' });
+  if (!Array.isArray(ruleNames) || ruleNames.length < 2) {
+    return res.status(400).json({ message: 'At least two valid rule names are required.' });
   }
 
   try {
-    const rules = await Rule.find({ _id: { $in: ruleIds } });
-    if (rules.length !== ruleIds.length) {
+    const rules = await Rule.find({ name: { $in: ruleNames } });  // Query using names, not IDs
+    if (rules.length !== ruleNames.length) {
       return res.status(404).json({ message: 'One or more rules not found.' });
     }
 
-    const ruleStrings = rules.map(rule => rule.ast.value); // Extracting the rule strings
+    const ruleStrings = rules.map(rule => rule.ast.value);
     const combinedAST = await combineRules(ruleStrings);
     
     const combinedRule = new Rule({
       ast: combinedAST,
-      name: `Combined Rule: ${ruleIds.join(', ')}`, // Customize as needed
+      name: `Combined Rule: ${ruleNames.join(', ')}`,  // Combine names, not IDs
     });
 
     const savedRule = await combinedRule.save();
@@ -191,8 +189,6 @@ router.post('/combine', async (req, res) => {
     res.status(500).json({ message: 'An error occurred while combining rules.' });
   }
 });
-
-
 
 
 

@@ -3,15 +3,15 @@ import React, { useState } from 'react';
 import './existing.css'; // Import the CSS file
 
 const CombineRules = () => {
-  const [ruleIds, setRuleIds] = useState('');
+  const [ruleNames, setRuleNames] = useState('');
   const [combinedRuleId, setCombinedRuleId] = useState('');
 
   const handleCombine = async (e) => {
     e.preventDefault();
-    const idsArray = ruleIds.split(',').map(id => id.trim());
+    const namesArray = ruleNames.split(',').map(name => name.trim());
     try {
       const response = await axios.post('http://localhost:5000/api/rules/combine', {
-        ruleIds: idsArray,
+        ruleNames: namesArray,
       });
       setCombinedRuleId(response.data.combinedRuleId);
       console.log('Combined Rule ID:', response.data.combinedRuleId);
@@ -28,22 +28,21 @@ const CombineRules = () => {
       }
     }
   };
-  
 
   const handleReset = () => {
-    setRuleIds('');
+    setRuleNames('');
     setCombinedRuleId(''); 
   };
 
   return (
     <div className="combine-rules-container">
       <form className="combine-rules-form" onSubmit={handleCombine}>
-        <h2>Combine Rules</h2>
+        <h2>Combine Rules by Name</h2>
         <input
           type="text"
-          placeholder="Rule IDs (comma-separated)"
-          value={ruleIds}
-          onChange={(e) => setRuleIds(e.target.value)}
+          placeholder="Rule Names (comma-separated)"
+          value={ruleNames}
+          onChange={(e) => setRuleNames(e.target.value)}
           required
           className="input-field"
         />
